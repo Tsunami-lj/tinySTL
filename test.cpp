@@ -31,17 +31,17 @@ void Test::operator delete(void* p) {
 
 int Test::count = 0;
 int main() {
-	Test* p1 = new Test();
+	Test* p1 = new Test;
 	p1->print();
 
-	Test* p2 = new Test();
+	Test* p2 = new Test;
 	p2->print();
 	delete p1;
 
-	p1 = new Test();
+	p1 = new Test;
 	p1->print();
 
-	Test *p3 = new Test();
+	Test *p3 = new Test;
 	p3->print();
 	delete p1;
 	delete p2;
