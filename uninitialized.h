@@ -3,6 +3,7 @@
 
 #include "iterator.h"
 #include "type_traits.h"
+#include <cstring>
 namespace mystl {
 
 //uninitialized_copy
