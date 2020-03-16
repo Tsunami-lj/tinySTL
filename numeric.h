@@ -1,7 +1,8 @@
 #ifndef MYSTL_NUMERIC_H_
 #define MYSTL_NUMERIC_H_
-namespace mystl {
 
+#include "iterator.h"
+namespace mystl {
 //对元素求和
 template <class InputIterator, class T>
 T accumulate(InputIterator first, InputIterator last, T init) {
