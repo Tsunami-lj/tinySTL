@@ -1,6 +1,10 @@
 #ifndef MYSTL_ALGOBASE_H_
 #define MYSTL_ALGOBASE_H_
 
+#include "iterator.h"
+#include "pair.h"
+#include "type_traits.h"
+
 namespace mystl {
 
 //swap && iter_swap
