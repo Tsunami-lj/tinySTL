@@ -128,5 +128,54 @@ value_type(const Iter&)
     return static_cast<typename iterator_traits<Iter>::value_type *>(0);
 }
 
+template <class InputIterator>
+inline typename iterator_traits<InputIterator>::distance_type
+distance(InputIterator first, InputIterator last) {
+    typedef typename iterator_traits<InputIterator>::iteraor_category Category;
+    return __distance(first, last, Category());
+}
+
+template <class InputIterator>
+inline typename iterator_traits<InputIterator>::difference_type
+__distance(InputIterator first, InputIterator last, input_ietrator_tag) {
+    typename iterator_traits<InputIterator>::difference_type n = 0;
+    while (first != last) {
+        ++first;
+        ++n;
+    }
+    return n;
+}
+
+template <class RandomAccessIterator>
+inline typename iterator_traits<RandomAccessIterator>::difference_type
+__distance(RandomAccessIterator first, RandomAccessIterator last,
+           random_access_ietrator_tag) {
+    return last - first;
+}
+
+template <class InputIterator, class Distance>
+inline void advance(InputIterator& i, Distance n) {
+    __advance(i, n, iteraor_category(i));
+}
+
+template <class InputIterator, class Distance>
+inline void __advance(InputIterator& i, Distance n, input_ietrator_tag) {
+    while (n--)
+        ++i;
+}
+
+template <class BidrectionalIterator, class Distance>
+inline void __advance(BidrectionalIterator& i, Distance n, bidirectional_ietrator_tag) {
+    if (n >= 0)
+        while (n--)
+            ++i;
+    else
+        while (n++)
+            --i;
+}
+
+template <class RandomAccessIterator, class Distance>
+inline void __advance(RandomAccessIterator&i, Distance n, random_access_iterator_tag) {
+    i += n;
 }
 #endif
