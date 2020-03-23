@@ -406,5 +406,144 @@ OutputIter remove_copy_if(InputIter first, InputIter last,
     return res;
 }
 
+// unique and unique_copy
+// 拷贝并去除b重复元素，实现方式比较简单，每次判断后一个位置是否与已经放置的元素相同
+//效果举例 10,20,20,20,30,30,20,20,10 => 10 20 30 20 10 0 0 0 0
+template <class InputIter, class OutputIter>
+inline OutputIter unique_copy(InputIter first, InputIter last,
+                              OutputIter res) {
+    if (first == last)
+        return res;
+    return __unique_copy(first, last, res,
+                         iterator_category(res));
+}
+
+template <class InputIter, class ForwardIter>
+ForwardIter __unique_copy(InputIter first, InputIter last,
+                         ForwardIter res, forward_iterator_tag) {
+    *res = *first;
+    while (++first != last) {
+        if (*res != *first)
+            *++res = *first;
+    }
+    return ++res;
+}
+
+template <class InputIter, class OutputIter>
+inline OutputIter __unique_copy(InputIter first, InputIter last,
+                                OutputIter res,
+                                output_iterator_tag) {
+    return __unique_copy(first, last, res, value_type(first));
+}
+
+//由于 output iterator 只能进行写操作，所以不能有 *result != *first 这样的判断
+template <class InputIter, class OutputIter, class T>
+OutputIter __unique_copy(InputIter first, InputIter last,
+                         OutputIter res, T*) {
+    T val = *first;
+    *res = val;
+    while (++first != last)
+        if (val != *first) {
+            val = *first;
+            *++res = val;
+        }
+    return ++res;
+}
+
+//使用比较对象cmp来比较
+template <class InputIter, class OutputIter, class BinaryPredicate>
+inline OutputIter unique_copy(InputIter first, InputIter last,
+                              OutputIter res,
+                              BinaryPredicate binary_pred) {
+    if (first == last)
+        return res;
+    return __unique_copy(first, last, result, binary_pred, iterator_category(res));
+}
+
+template <class InputIter, class ForwardIter, class BinaryPredicate>
+ForwardIter __unique_copy(InputIter first, InputIter last,
+                          ForwardIter res,
+                          BinaryPredicate binary_pred,
+                          forward_iterator_tag) {
+    *res = *first;
+    while (++first != last)
+        if (!binary_pred(*res, *first))
+            *++res = *first;
+    return ++result;
+}
+
+template <class InputIter, class OutputIter, class BinaryPredicate>
+OutputIter __unique_copy(InputIter first, InputIter last,
+                          OutputIter res,
+                          BinaryPredicate binary_pred,
+                          output_iterator_tag) {
+    return __unique_copy(first, last, res, binary_pred, value_type(first));
+}
+
+template <class InputIter, class OutputIter, class BinaryPredicate, class T>
+OutputIter __unique_copy(InputIter first, InputIter last,
+                         OutputIter res,
+                         BinaryPredicate binary_pred, T*) {
+    T val = *first;
+    *res = val;
+    while (++first != last)
+        if (!binary_pred(val, *first)) {
+            val = *first;
+            *++res = val;
+        }
+    return ++res;
+}
+
+//unique
+//将[first, last)区间内连续的重复元素去掉，但是内部依然可能有相同的元素
+template <class ForwardIter>
+ForwardIter unique(ForwardIter first, ForwardIter last) {
+    first = adjacent_find(first, last);
+    return unique_copy(first, last, first);
+}
+
+template <class ForwardIterm, BinaryPredicate binary_pred>
+ForwardIter unique(ForwardIter first, ForwardIter last,
+                   BinaryPredicate binary_pred) {
+    first = adjacent_find(first, last, binary_pred);
+    return unique_copy(first, last, first, binary_pred);
+}
+
+//reverse and reverse_copy, and their auxiliary functions
+template <class BidrectionalIter>
+inline void reverse(BidrectionalIter first, BidrectionalIter last) {
+    __reverse(first, last, iterator_category(first));
+}
+
+template <class BidrectionalIter>
+void __reverse(BidrectionalIter first, BidrectionalIter last,
+               bidrectional_iterator_tag) {
+    while (true) {
+        if (first == last || first == --last)
+            return ;//小于等于一个元素，直接返回
+        iter_swap(first++, last);
+    }
+}
+
+//random_access版本
+template <class RandomAccessIter>
+void __reverse(RandomAccessIter first, RandomAccessIter last,
+               random_access_iterator_tag) {
+    while (first < last) {
+        iter_swap(first++, --last);
+    }
+}
+
+template <class BidrectionalIter, class OutputIter>
+OutputIter reverse_copy(BidrectionalIter first,
+                        BidrectionalIter last,
+                        OutputIter res) {
+    while (first != last) {
+        --last;
+        *res = *last;
+        ++res;
+    }
+    return res;
+}
 }
 #endif
