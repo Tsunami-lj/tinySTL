@@ -545,5 +545,264 @@ OutputIter reverse_copy(BidrectionalIter first,
     }
     return res;
 }
+
+// rotate and rotate_copy, and their auxiliary functions
+//rotate区间[first, last)内的元素，使得以middle为起始元素
+template <class ForwardIter>
+inline ForwardIter rotate(ForwardIter first, ForwardIter middle,
+                         ForwardIter last) {
+    return __rotate(first, middle, last,
+                    distance_type(first),
+                    iterator_category(first));
+}
+
+//ForwardItery特化版本
+template <class ForwardIter, class Distance>
+ForwardIter __rotate(ForwardIter first,
+                     ForwardIter middle,
+                     ForwardIter last,
+                     Distance*,
+                     forward_iterator_tag) {
+    if (first == middle)
+        return last;
+    if (last == middle)
+        return first;
+    
+    //当middle比较靠前[first, middle) < [middle, last)的时候，一段段的将[first, middle)往后换
+    ForwardIter first2 = middle;
+    do {
+        swap(*first++, *first2++);
+        if (first == middle)
+            middle = first2;
+    } while (first2 != last);
+    
+    //此时必定是middle靠后[first, middle) > [middle, last)
+    ForwardIter new_middle = first;
+    
+    first2 = middle;
+    while (first2 != last) {
+        swap(*first++, *first2++);
+        if (first == middle) //此情形与上述过程一样
+            middle = first2;
+        else if (first2 == last)// 此时将原来的长度变成一个更小区间的子问题
+            first2 = middle;
+    }
+    return new_middle;
+}
+
+//BidrectionalIter特化版本
+template <class BidrectionalIter, class Distance>
+BidrectionalIter __rotate(BidrectionalIter first,
+                     BidrectionalIter middle,
+                     BidrectionalIter last,
+                     Distance*,
+                     bidrectional_iterator_tag) {
+    if (first == middle)
+        return last;
+    if (last == middle)
+        return first;
+    
+    reverse(first, middle, bidrectional_iterator_tag());
+    reverse(middle, last, bidrectional_iterator_tag());
+    
+    while (first != middle && middle != last)
+        swap(*first++, *--last);
+    
+    if (first == middle) {
+        reverse(middle, last, bidrectional_iterator_tag());
+    } else {
+        reverse(first, middle, bidrectional_iterator_tag());
+        return first;
+    }
+}
+
+//RandomAccessIter特化版本
+template <class RandomAccessIter, class Distance, class T>
+RandomAccessIter __rotate(RandomAccessIter first,
+                     RandomAccessIter middle,
+                     RandomAccessIter last,
+                     Distance*, T*) {
+    Distance n = last - first;
+    Distance k = middle - first;
+    Distance l = n - k;
+    RandomAccessIter result = first + (last - middle);
+    
+    if (k == l) {
+        swap_ranges(first, middle, middle);
+        return result;
+    }
+    
+    Distance d = gcd(n, k);
+    //该算法细节较为复杂，核心思想是分块，每次将相同偏移的处理好。具体代码有时间需要慢慢扣
+    for (Distance i = 0; i < d; i++) {
+        T tmp = *first;
+        RandomAccessIter p = first;
+        
+        if (k < l) {
+            for (Distance j = 0; j < l/d; j++) {
+                if (p > first + l) {
+                    *p = *(p - l);
+                    p -= l;
+                }
+                *p = *(p + k);
+                p += k;
+            }
+        } else {
+            for (Distance j = 0; j < k/d - 1; j++) {
+                if (p < last - k) {
+                    *p = *(p + k);
+                    p += k;
+                }
+                
+                *p = *(p - l);
+                p -= l;
+            }
+        }
+        *p = tmp;
+        ++first;
+    }
+    return result;
+}
+
+template <class EuclideanRingElement>
+EuclideanRingElement gcd (EuclideanRingElement m, EuclideanRingElement n) {
+    while (n != 0) {
+        EuclideanRingElement t = m % n;
+        m = n;
+        n = t;
+    }
+    return m;
+}
+
+template <class ForwardIter, class OutputIter>
+OutputIter rotate_copy(ForwardIter first, ForwardIter middle,
+                       ForwardIter last, OutputIter result) {
+    //先将[middle, last)拷贝到res， 再将[first, middle)拷贝
+    return copy(first, middle, copy(middle, last, result));
+}
+
+template <class Distance>
+inline Distance random_number(Distance n) {
+    return rand() % n;
+}
+
+//random_shuffle
+template <class RandomAccessIter>
+inline void random_shuffle(RandomAccessIter first, RandomAccessIter last) {
+    if (first == last)
+        return ;
+    //每个位置都跟随机的一个位置交换一下
+    for (RandomAccessIter i = first + 1; i != last; ++i)
+        iter_swap(i, first + random_number((i - first) + 1));
+}
+
+template <class RandomAccessIter, class RandomNumberGenerator>
+void random_shuffle(RandomAccessIter first, RandomAccessIter last,
+                    RandomNumberGenerator& rand) {
+    if (first == last)
+        return ;
+    //每个位置都跟随机的一个位置交换一下
+    for (RandomAccessIter i = first + 1; i != last; ++i)
+        iter_swap(i, first + rand((i - first) + 1));
+}
+
+//random_sample and random_sample_n
+template <class InputIter, class RandomAccessIter>
+inline RandomAccessIter
+random_sample(InputIter first, InputIter last,
+              RandomAccessIter out_first, RandomAccessIter out_last) {
+    return __random_sample(first, last, out_first, out_last - out_first);
+}
+
+template <class InputIter, class RandomAccessIter, class Distance>
+RandomAccessIter __random_sample(InputIter first, InputIter last,
+                                 RandomAccessIter res, const Distance n) {
+    Distance m = 0;
+    Distance t = n;
+    for ( ; first != last && m < n; ++m, ++first)
+        res[m] = *first;
+    
+    while (first != last) {
+        ++t;
+        Distance M = random_number(t);
+        if (M < n)
+            res[M] = *first;
+        ++first;
+    }
+    return res + m;
+}
+
+//带自定义随机数生成器的c随机采样
+template <class InputIter, class RandomAccessIter, class RandomNumberGenerator>
+inline RandomAccessIter
+random_sample(InputIter first, InputIter last,
+              RandomAccessIter out_first, RandomAccessIter out_last,
+              RandomNumberGenerator& rand) {
+    return __random_sample(first, last, out_first, rand, out_last - out_first);
+}
+
+template <class InputIter, class RandomAccessIter,
+          class RandomNumberGenerator, class Distance>
+RandomAccessIter __random_sample(InputIter first, InputIter last,
+                                 RandomAccessIter res,
+                                 RandomNumberGenerator& rand,
+                                 const Distance n) {
+    Distance m = 0;
+    Distance t = n;
+    for ( ; first != last && m < n; ++m, ++first)
+        res[m] = *first;
+    
+    while (first != last) {
+        ++t;
+        Distance M = rand(t);
+        if (M < n)
+            res[M] = *first;
+        ++first;
+    }
+    return res + m;
+}
+
+template <class ForwardIter, class OutputIter, class Distance>
+OutputIter random_sample_n(ForwardIter first, ForwardIter last,
+                           OutputIter res, const Distance n) {
+    Distance remaining = 0;
+    distance(first, last, remaining);
+    Distance m = min(n, remaining);
+    
+    while (m > 0) {
+        //只有当生成的随机数小于m的时候我们才将他存入结果中
+        if (random_number(remaining) < m) {
+            *res = *first;
+            ++res;
+            --m;
+        }
+
+        --remaining;
+        ++first;
+    }
+    return res;
+}
+
+template <class ForwardIter, class OutputIter, class Distance,
+          class RandomNumberGenerator>
+OutputIter random_sample_n(ForwardIter first, ForwardIter last,
+                           OutputIter res, const Distance n,
+                           RandomNumberGenerator& rand) {
+    Distance remaining = 0;
+    distance(first, last, remaining);
+    Distance m = min(n, remaining);
+    
+    while (m > 0) {
+        if (rand(remaining) < m) {
+            *res = *first;
+            ++res;
+            --m;
+        }
+
+        --remaining;
+        ++first;
+    }
+    return res;
+}
 }
 #endif
