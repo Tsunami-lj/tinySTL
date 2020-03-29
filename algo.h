@@ -1271,5 +1271,890 @@ inline void liner_insert(RandomAccessIter first,
         unguared_linear_insert(last, val, comp);
 }
 
+// nth_element() and its auxiliary functions.
+//核心思想是通过partion来计算是否已经到了k个元素
+template <class RandomAccessIter>
+inline void nth_element(RandomAccessIter first, RandomAccessIter nth,
+                        RandomAccessIter last) {
+    __nth_element(first, nth, last, value_type(first));
+}
+
+template <class RandomAccessIter, class T>
+void __nth_element(RandomAccessIter first, RandomAccessIter __nth_element,
+                   RandomNumberGenerator last, T*) {
+    while (last - first > 3) {
+        RandomAccessIter cur = unguarded_partion(first, last, T(median(*first,
+                                                                       *(first + (last - first)/2),
+                                                                       *(last - 1))));
+        if (cut <= nth)
+            first = cut;
+        else
+            last = cut;
+    }
+    insertion_sort(first, last);
+}
+
+// nth_element() with Compare
+template <class RandomAccessIter, class Compare>
+inline void nth_element(RandomAccessIter first, RandomAccessIter nth,
+                        RandomAccessIter last, Compare comp) {
+    __nth_element(first, nth, last, value_type(first), comp);
+}
+
+template <class RandomAccessIter, class T, class Compare>
+void __nth_element(RandomAccessIter first, RandomAccessIter __nth_element,
+                   RandomNumberGenerator last, T*, Compare comp) {
+    while (last - first > 3) {
+        RandomAccessIter cur = unguarded_partion(first, last, T(median(*first,
+                                                                       *(first + (last - first)/2),
+                                                                       *(last - 1),
+                                                                       comp)),
+                                                 comp);
+        if (cut <= nth)
+            first = cut;
+        else
+            last = cut;
+    }
+    insertion_sort(first, last, comp);
+}
+
+// Binary search (lower_bound, upper_bound, equal_range, binary_search).
+
+//lower_bound
+template <class ForwardIter, class T>
+inline ForwardIter lower_bound(ForwardIter first, ForwardIter last, const T& val) {
+    return __lower_bound(first, last, val, distance_type(first));
+}
+
+//虽然有二分的思想，不过如果是链表的话，效率是极低的
+template <class ForwardIter, class T, class Distance>
+ForwardIter __lower_bound(ForwardIter first, ForwardIter last,
+                          const T& val, Distance*) {
+    Distance len = 0;
+    distance(first, last, len);
+    Distance half;
+    ForwardIter middle;
+    while (len > 0) {
+        half = len >> 1;
+        middle = first;
+        advance(middle, half);
+        if (*middle < val) {
+            first = middle;
+            ++first;
+            len = len - half - 1;
+        } else
+            len = half;
+    }
+    return first;
+}
+
+//自定义比较函数的版本
+template <class ForwardIter, class T, class Compare>
+inline ForwardIter lower_bound(ForwardIter first, ForwardIter last,
+                               const T& val, Compare comp) {
+    return __lower_bound(first, last, val, comp, distance_type(first));
+}
+
+//虽然有二分的思想，不过如果是链表的话，效率是极低的
+template <class ForwardIter, class T, class Compare, class Distance>
+ForwardIter __lower_bound(ForwardIter first, ForwardIter last,
+                          const T& val, Compare comp, Distance*) {
+    Distance len = 0;
+    distance(first, last, len);
+    Distance half;
+    ForwardIter middle;
+    while (len > 0) {
+        half = len >> 1;
+        middle = first;
+        advance(middle, half);
+        if (comp(*middle, val)) {
+            first = middle;
+            ++first;
+            len = len - half - 1;
+        } else
+            len = half;
+    }
+    return first;
+}
+
+//upper_bound
+template <class ForwardIter, class T>
+inline ForwardIter upper_bound(ForwardIter first, ForwardIter last, const T& val) {
+    return __upper_bound(first, last, val, distance_type(first));
+}
+
+//虽然有二分的思想，不过如果是链表的话，效率是极低的
+template <class ForwardIter, class T, class Distance>
+ForwardIter __upper_bound(ForwardIter first, ForwardIter last,
+                          const T& val, Distance*) {
+    Distance len = 0;
+    distance(first, last, len);
+    Distance half;
+    ForwardIter middle;
+    while (len > 0) {
+        half = len >> 1;
+        middle = first;
+        advance(middle, half);
+        if (val < *middle) {
+            len = half;
+        } else {
+            first = middle;
+            ++first;
+            len = len - half - 1;
+        }
+            
+    }
+    return first;
+}
+
+//自定义比较函数的版本
+template <class ForwardIter, class T, class Compare>
+inline ForwardIter upper_bound(ForwardIter first, ForwardIter last,
+                               const T& val, Compare comp) {
+    return __upper_bound(first, last, val, comp, distance_type(first));
+}
+
+//虽然有二分的思想，不过如果是链表的话，效率是极低的
+template <class ForwardIter, class T, class Compare, class Distance>
+ForwardIter __upper_bound(ForwardIter first, ForwardIter last,
+                          const T& val, Compare comp, Distance*) {
+    Distance len = 0;
+    distance(first, last, len);
+    Distance half;
+    ForwardIter middle;
+    while (len > 0) {
+        half = len >> 1;
+        middle = first;
+        advance(middle, half);
+        if (comp(val, *middle)) {
+           len = half;
+        } else {
+            first = middle;
+            ++first;
+            len = len - half - 1;
+        }
+    }
+    return first;
+}
+
+//equal_range
+template <class ForwardIter, class T>
+inline pair<ForwardIter, ForwardIter>
+equal_range(ForwardIter first, ForwardIter last, const T& val) {
+    return __equal_range(first, last, val, distance_type(first));
+}
+
+template <class ForwardIter, class T, class Distance>
+pair<ForwardIter, ForwardIter>
+__equal_range(ForwardIter first, ForwardIter last, const T& val,
+              Distance*) {
+    Distance len = 0;
+    distance(first, last, len);
+    Distance half;
+    ForwardIter middle, left, right;
+    
+    while (len > 0) {
+        half = len >> 1;
+        middle = first;
+        advance(middle, half);
+        if (*middle < val) {
+            first = middle;
+            ++first;
+            len = len - half - 1;
+        } else if (val < *middle)
+            len = half;
+        else {
+            left = lower_bound(first, middle, val);
+            advance(first, len);
+            right = upper_bound(++middle, first, val);
+            return pair<ForwardIter, ForwardIter>(left, right);
+        }
+    }
+    return pair<ForwardIter, ForwardIter>(first, first);
+}
+
+//equal_range
+template <class ForwardIter, class T, class Compare>
+inline pair<ForwardIter, ForwardIter>
+equal_range(ForwardIter first, ForwardIter last, const T& val,
+            Compare comp) {
+    return __equal_range(first, last, val, comp, distance_type(first));
+}
+
+template <class ForwardIter, class T, class Compare, class Distance>
+pair<ForwardIter, ForwardIter>
+__equal_range(ForwardIter first, ForwardIter last, const T& val,
+              Compare comp, Distance*) {
+    Distance len = 0;
+    distance(first, last, len);
+    Distance half;
+    ForwardIter middle, left, right;
+    
+    while (len > 0) {
+        half = len >> 1;
+        middle = first;
+        advance(middle, half);
+        if (comp(*middle, val)) {
+            first = middle;
+            ++first;
+            len = len - half - 1;
+        } else if (comp(val, *middle))
+            len = half;
+        else {
+            left = lower_bound(first, middle, val, comp);
+            advance(first, len);
+            right = upper_bound(++middle, first, val, comp);
+            return pair<ForwardIter, ForwardIter>(left, right);
+        }
+    }
+    return pair<ForwardIter, ForwardIter>(first, first);
+}
+
+//binary_search
+template <class ForwardIter, class T>
+bool binary_search(ForwardIter first, ForwardIter last, const T& val) {
+    ForwardIter i = lower_bound(first, last, val);
+    //这边需要注意lower_bound返回的是第一个位置，而val < 第一个位置的值的时候
+    return i != last && !(val < *i);
+}
+
+//binary_search with Compare
+template <class ForwardIter, class T, class Compare>
+bool binary_search(ForwardIter first, ForwardIter last,
+                   const T& val, Compare comp) {
+    ForwardIter i = lower_bound(first, last, val, comp);
+    //这边需要注意lower_bound返回的是第一个位置，而val < 第一个位置的值的时候
+    return i != last && !(comp(val, *i));
+}
+
+//merge
+template <class InputIter1, class InputIter2, class OutputIter>
+OutputIter merge(InputIter1 first1, InputIter1 last1,
+                 InputIter2 first2, InputIter2 last2,
+                 OutputIter result) {
+    while (first1 != last1 && first2 != last2) {
+        if (*first2 < *first1) {
+            *result = *first2;
+            ++first2;
+        } else {
+             *result = *first1;
+            ++first1;
+        }
+        ++result;
+    }
+    return copy(first2, last2, copy(first1, last1, result));
+}
+
+//merge with Compare
+template <class InputIter1, class InputIter2, class OutputIter, class Compare>
+OutputIter merge(InputIter1 first1, InputIter1 last1,
+                 InputIter2 first2, InputIter2 last2,
+                 OutputIter result, Compare Compare) {
+    while (first1 != last1 && first2 != last2) {
+        if (comp(*first2, *first1)) {
+            *result = *first2;
+            ++first2;
+        } else {
+             *result = *first1;
+            ++first1;
+        }
+        ++result;
+    }
+    return copy(first2, last2, copy(first1, last1, result));
+}
+
+/*待补充
+template <class BidrectionalIter>
+inline void inplace_merge(BidrectionalIter first,
+                          BidrectionalIter middle,
+                          BidrectionalIter last) {
+    if (first == middle || middle == last)
+        return;
+    inplace_merge_aux(first, middle, last, value_type(first), distance_type(first));
+}
+
+template <class BidrectionalIter, class T, class Distance, class Compare>
+inline void inplace_merge_aux(BidrectionalIter first,
+                              BidrectionalIter middle,
+                              BidrectionalIter last,
+                              T*, Distance*) {
+    Distance len1 = 0;
+    distance(first, middle, len1);
+    Distance len2 = 0;
+    distance(middle, last, len2);
+}*/
+
+//set相关算法， 前提都是元素已排序
+//集合[first1, last1)是否包含了集合[first2, last2)
+template <class InputIter1, class InputIter2>
+bool includes(InputIter1 first1, InputIter1 last1,
+              InputIter2 first2, InputIter2 last2) {
+    while (first1 != last1 && first2 != last2)
+        if (*first2 < *first1)
+            return false;
+        else if (*first1 < *first2)
+            ++first1;
+        else
+            ++first1, ++first2;
+    return first2 == last2;
+}
+
+//集合[first1, last1)是否包含了集合[first2, last2)
+template <class InputIter1, class InputIter2, class Compare>
+bool includes(InputIter1 first1, InputIter1 last1,
+              InputIter2 first2, InputIter2 last2,
+              Compare comp) {
+    while (first1 != last1 && first2 != last2)
+        if (comp(*first2, *first1))
+            return false;
+        else if (comp(*first1, *first2))
+            ++first1;
+        else
+            ++first1, ++first2;
+    return first2 == last2;
+}
+
+//set_union，求两个集合的并集
+template <class InputIter1, class InputIter2, class OutputIter>
+OutputIter set_union(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result) {
+    while (first1 != last1 && first2 != last2) {
+        if (*first1 < *first2) {
+            *result = *first1;
+            ++first1;
+        } else if (*first2 < *first1) {
+            *result = *first2;
+            ++first2;
+        } else {
+            *result = *first1;
+            ++first1;
+            ++first2;
+        }
+        ++result;
+    }
+    return copy(first2, last2, copy(first1, last1, result));
+}
+
+//set_union，求两个集合的并集 自定义比较函数
+template <class InputIter1, class InputIter2, class OutputIter, class Compare>
+OutputIter set_union(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result, Compare comp) {
+    while (first1 != last1 && first2 != last2) {
+        if (comp(*first1, *first2)) {
+            *result = *first1;
+            ++first1;
+        } else if (comp(*first2, *first1)) {
+            *result = *first2;
+            ++first2;
+        } else {
+            *result = *first1;
+            ++first1;
+            ++first2;
+        }
+        ++result;
+    }
+    return copy(first2, last2, copy(first1, last1, result));
+}
+
+//set_intersection, 求两个集合的交集
+template <class InputIter1, class InputIter2, class OutputIter>
+OutputIter set_intersection(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result) {
+    while (first1 != last1 && first2 != last2) {
+        if (*first1 < *first2) {
+            ++first1;
+        } else if (*first2 < *first1) {
+            ++first2;
+        } else {
+            *result = *first1;
+            ++first1;
+            ++first2;
+            ++result;
+        }
+    }
+    return result;
+}
+
+//set_intersection, 求两个集合的交集 自定义比较函数
+template <class InputIter1, class InputIter2, class OutputIter, class Compare>
+OutputIter set_intersection(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result, Compare comp) {
+    while (first1 != last1 && first2 != last2) {
+        if (comp(*first1, *first2)) {
+            ++first1;
+        } else if (comp(*first2, *first1)) {
+            ++first2;
+        } else {
+            *result = *first1;
+            ++first1;
+            ++first2;
+            ++result;
+        }
+    }
+    return result;
+}
+
+//set_difference, 求两个集合的差集，即出现在了第一个里面，却没有出现在第二个集合里面的值
+template <class InputIter1, class InputIter2, class OutputIter>
+OutputIter set_difference(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result) {
+    while (first1 != last1 && first2 != last2) {
+        if (*first1 < *first2) {
+            *result = *first1;
+            ++first1;
+            ++result;
+        } else if (*first2 < *first1) {
+            ++first2;
+        } else {
+            ++first1;
+            ++first2;
+        }
+    }
+    return copy(first1, last1, result);
+}
+
+//set_difference, 求两个集合的差集，即出现在了第一个里面，却没有出现在第二个集合里面的值, 自定义比较函数
+template <class InputIter1, class InputIter2, class OutputIter, class Compare>
+OutputIter set_difference(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result, Compare comp) {
+    while (first1 != last1 && first2 != last2) {
+        if (comp(*first1, *first2)) {
+            *result = *first1;
+            ++first1;
+            ++result;
+        } else if (comp(*first2, *first1)) {
+            ++first2;
+        } else {
+            ++first1;
+            ++first2;
+        }
+    }
+    return copy(first1, last1, result);
+}
+
+//set_symmetric_difference, 求两个集合的对称差集，即出现在了第一个里面，却没有出现在第二个集合里面的值,
+//以及出现在了第二个里面，却没有出现在第一个集合里面的值
+template <class InputIter1, class InputIter2, class OutputIter>
+OutputIter set_symmetric_difference(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result) {
+    while (first1 != last1 && first2 != last2) {
+        if (*first1 < *first2) {
+            *result = *first1;
+            ++first1;
+            ++result;
+        } else if (*first2 < *first1) {
+            *result = *first2;
+            ++first2;
+            ++result;
+        } else {
+            ++first1;
+            ++first2;
+        }
+    }
+    //此处跟别的地方first和last的顺序不太一样，按我的理解应该是无所谓的，两者里面必有一空
+    return copy(first2, last2, copy(first1, last1,result));
+}
+
+//set_symmetric_difference, 求两个集合的对称差集，即出现在了第一个里面，却没有出现在第二个集合里面的值,
+//以及出现在了第二个里面，却没有出现在第一个集合里面的值 自定义比较函数版本
+template <class InputIter1, class InputIter2, class OutputIter, class Compare>
+OutputIter set_symmetric_difference(InputIter1 first1, InputIter1 last1,
+                     InputIter2 first2, InputIter2 last2,
+                     OutputIter result, Compare comp) {
+    while (first1 != last1 && first2 != last2) {
+        if (comp(*first1, *first2)) {
+            *result = *first1;
+            ++first1;
+            ++result;
+        } else if (comp(*first2, *first1)) {
+            *result = *first2;
+            ++first2;
+            ++result;
+        } else {
+            ++first1;
+            ++first2;
+        }
+    }
+    //此处跟别的地方first和last的顺序不太一样，按我的理解应该是无所谓的，两者里面必有一空
+    return copy(first2, last2, copy(first1, last1,result));
+}
+
+// min_element and max_element
+
+//max_element 返回第一个最大值的迭代器
+template <class ForwardIter>
+ForwardIter max_element(ForwardIter first, ForwardIter last) {
+    if (first == last)
+        return first;
+    ForwardIter result = first;
+    while (++first != last)
+        if (*result < *first)
+            result = first;
+    return result;
+}
+
+template <class ForwardIter, class Compare>
+ForwardIter max_element(ForwardIter first, ForwardIter last,
+                        Compare comp) {
+    if (first == last)
+        return first;
+    ForwardIter result = first;
+    while (++first != last)
+        if (comp(*result, *first))
+            result = first;
+    return result;
+}
+
+//min_element 返回第一个最小值的迭代器
+template <class ForwardIter>
+ForwardIter min_element(ForwardIter first, ForwardIter last) {
+    if (first == last)
+        return first;
+    ForwardIter result = first;
+    while (++first != last)
+        if (*first < *result)
+            result = first;
+    return result;
+}
+
+template <class ForwardIter, class Compare>
+ForwardIter min_element(ForwardIter first, ForwardIter last,
+                        Compare comp) {
+    if (first == last)
+        return first;
+    ForwardIter result = first;
+    while (++first != last)
+        if (comp(*first, *result))
+            result = first;
+    return result;
+}
+
+// next_permutation and prev_permutation
+// next_permutation
+/*
+1.Find the largest index k such that nums[k] < nums[k + 1]. If no such index exists, just reverse nums and done.
+2.Find the largest index l > k such that nums[k] < nums[l].
+3.Swap nums[k] and nums[l].
+4.Reverse the sub-array nums[k + 1:].
+ */
+template <class BidrectionalIter>
+bool next_permutation(BidrectionalIter first, BidrectionalIter last) {
+    if (first == last)
+        return false;
+    BidrectionalIter i = first;
+    ++i;
+    if (i == last) //只有一个元素
+        return false;
+    i = last;
+    --i;
+    for (;;) {
+        BidrectionalIter ii = i;
+        --i;
+        if (*i < *ii) { //从后往前寻找第一个相邻且递增的位置i
+            BidrectionalIter j = last;
+            while (!(*i < *--j));//从后往前寻找第一个小于i位置的位置j
+            iter_swap(i, j);//交换两个位置的元素
+            reverse(ii, last);//将区间[i + 1, j)元素逆序
+            return true;
+        }
+        if (i == first) {
+            reverse(first, last);
+            return false;
+        }
+    }
+}
+
+// next_permutation 自定义比较函数
+/*
+1.Find the largest index k such that nums[k] < nums[k + 1]. If no such index exists, just reverse nums and done.
+2.Find the largest index l > k such that nums[k] < nums[l].
+3.Swap nums[k] and nums[l].
+4.Reverse the sub-array nums[k + 1:].
+ */
+template <class BidrectionalIter, class Compare>
+bool next_permutation(BidrectionalIter first, BidrectionalIter last,
+                      Compare comp) {
+    if (first == last)
+        return false;
+    BidrectionalIter i = first;
+    ++i;
+    if (i == last) //只有一个元素
+        return false;
+    i = last;
+    --i;
+    for (;;) {
+        BidrectionalIter ii = i;
+        --i;
+        if (comp(*i, *ii)) { //从后往前寻找第一个相邻且递增的位置i
+            BidrectionalIter j = last;
+            while (!comp(*i, *--j));//从后往前寻找第一个小于i位置的位置j
+            iter_swap(i, j);//交换两个位置的元素
+            reverse(ii, last);//将区间[i + 1, j)元素逆序
+            return true;
+        }
+        if (i == first) {
+            reverse(first, last);
+            return false;
+        }
+    }
+}
+
+//prev_permutation
+template <class BidrectionalIter>
+bool prev_permutation(BidrectionalIter first, BidrectionalIter last) {
+    if (first == last)
+        return false;
+    BidrectionalIter i = first;
+    ++i;
+    if (i == last) //只有一个元素
+        return false;
+    i = last;
+    --i;
+    for (;;) {
+        BidrectionalIter ii = i;
+        --i;
+        if (*ii < *i) { //从后往前寻找第一个相邻且递减的位置i
+            BidrectionalIter j = last;
+            while (!(*--j < *i));//从后往前寻找第一个大于i位置的位置j
+            iter_swap(i, j);//交换两个位置的元素
+            reverse(ii, last);//将区间[i + 1, j)元素逆序
+            return true;
+        }
+        if (i == first) {
+            reverse(first, last);
+            return false;
+        }
+    }
+}
+
+//prev_permutation 自定义比较函数
+template <class BidrectionalIter, class Compare>
+bool prev_permutation(BidrectionalIter first, BidrectionalIter last,
+                      Compare comp) {
+    if (first == last)
+        return false;
+    BidrectionalIter i = first;
+    ++i;
+    if (i == last) //只有一个元素
+        return false;
+    i = last;
+    --i;
+    for (;;) {
+        BidrectionalIter ii = i;
+        --i;
+        if (comp(*ii, *i)) { //从后往前寻找第一个相邻且递减的位置i
+            BidrectionalIter j = last;
+            while (!comp(*--j, *i));//从后往前寻找第一个大于i位置的位置j
+            iter_swap(i, j);//交换两个位置的元素
+            reverse(ii, last);//将区间[i + 1, j)元素逆序
+            return true;
+        }
+        if (i == first) {
+            reverse(first, last);
+            return false;
+        }
+    }
+}
+
+//find_first_of 在[first2, last2)的区间内找到第一个[first1, last1)中的元素
+template <class InputIter, class ForwardIter>
+InputIter find_first_of(InputIter first1, InputIter last1,
+                        ForwardIter first2, ForwardIter last2) {
+    for ( ; first1 != last1; ++first1)
+        for (ForwardIter iter = first2; iter != last2; ++iter)
+            if (*first1 == *iter)
+                return first1;
+    return last1;
+}
+
+template <class InputIter, class ForwardIter, class Compare>
+InputIter find_first_of(InputIter first1, InputIter last1,
+                        ForwardIter first2, ForwardIter last2,
+                        Compare comp) {
+    for ( ; first1 != last1; ++first1)
+        for (ForwardIter iter = first2; iter != last2; ++iter)
+            if (comp(*first1, *iter))
+                return first1;
+    return last1;
+}
+
+// find_end,在[first1, last1)中寻找序列 [first2, last2)，返回最后一个匹配的位置
+// Note that find_end for bidirectional iterators
+// is much faster than for forward iterators.
+template <class ForwardIter1, class ForwardIter2>
+inline ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
+                             ForwardIter2 first2, ForwardIter2 last2) {
+    return __find_end(first1, last1, first2, last2,
+                      iterator_category(first1),
+                      iterator_category(first2));
+}
+
+template <class ForwardIter1, class ForwardIter2>
+ForwardIter1 __find_end(ForwardIter1 first1, ForwardIter1 last1,
+                        ForwardIter2 first2, ForwardIter2 last2,
+                        forward_iterator_tag, forward_iterator_tag) {
+    if (first2 == last2)
+        return last1;
+    ForwardIter1 result = last1;
+    while (1) {
+        ForwardIter1 new_res = search(first1, last1, first2, last2);
+        if (new_res == last1)
+            return result;
+        else {
+            result = new_res;
+            first1 = new_res;
+            ++first1;
+        }
+    }
+}
+
+//双向的可以直接从后往前找，找到第一个就是值
+template <class BidrectionalIter1, class BidrectionalIter2>
+BidrectionalIter1 __find_end(BidrectionalIter1 first1, BidrectionalIter1 last1,
+                             BidrectionalIter2 first2, BidrectionalIter2 last2,
+                             bidrectional_iterator_tag, bidrectional_iterator_tag) {
+    typedef reverse_iterator<BidrectionalIter1> revIter1;
+    typedef reverse_iterator<BidrectionalIter2> revIter2;
+    
+    revIter1 rlast1(first1);
+    revIter2 rlast2(first2);
+    revIter1 rres = search(revIter1(last1), rlast1,
+                           revIter2(last2), rlast2);
+    
+    if (rres == rlast1)
+        return last1;
+    BidrectionalIter1 result = rres.base();
+    advance(result, -distance(first2, last2));
+    return result;
+}
+
+// find_end,在[first1, last1)中寻找序列 [first2, last2)，返回最后一个匹配的位置 自定义比较函数
+// Note that find_end for bidirectional iterators
+// is much faster than for forward iterators.
+template <class ForwardIter1, class ForwardIter2, class BinaryPredicate>
+inline ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
+                             ForwardIter2 first2, ForwardIter2 last2,
+                             BinaryPredicate comp) {
+    return __find_end(first1, last1, first2, last2,
+                      iterator_category(first1),
+                      iterator_category(first2),
+                      comp);
+}
+
+template <class ForwardIter1, class ForwardIter2, class BinaryPredicate>
+ForwardIter1 __find_end(ForwardIter1 first1, ForwardIter1 last1,
+                        ForwardIter2 first2, ForwardIter2 last2,
+                        forward_iterator_tag, forward_iterator_tag,
+                        BinaryPredicate comp) {
+    if (first2 == last2)
+        return last1;
+    ForwardIter1 result = last1;
+    while (1) {
+        ForwardIter1 new_res = search(first1, last1, first2, last2, comp);
+        if (new_res == last1)
+            return result;
+        else {
+            result = new_res;
+            first1 = new_res;
+            ++first1;
+        }
+    }
+}
+
+//双向的可以直接从后往前找，找到第一个就是值
+template <class BidrectionalIter1, class BidrectionalIter2, class BinaryPredicate>
+BidrectionalIter1 __find_end(BidrectionalIter1 first1, BidrectionalIter1 last1,
+                             BidrectionalIter2 first2, BidrectionalIter2 last2,
+                             bidrectional_iterator_tag, bidrectional_iterator_tag,
+                             BinaryPredicate comp) {
+    typedef reverse_iterator<BidrectionalIter1> revIter1;
+    typedef reverse_iterator<BidrectionalIter2> revIter2;
+    
+    revIter1 rlast1(first1);
+    revIter2 rlast2(first2);
+    revIter1 rres = search(revIter1(last1), rlast1,
+                           revIter2(last2), rlast2,
+                           comp);
+    
+    if (rres == rlast1)
+        return last1;
+    BidrectionalIter1 result = rres.base();
+    advance(result, -distance(first2, last2));
+    return result;
+}
+
+// is_heap
+template <class RandomAccessIter>
+inline bool is_heap(RandomAccessIter first, RandomAccessIter last) {
+    return __is_heap(first, last - first);
+}
+
+template <class RandomAccessIter, class Distance>
+bool __is_heap(RandomAccessIter first, Distance n) {
+    Distance parent = 0;
+    for (Distance child = 1; chil < n; ++child) {
+        if (first[parent] < first[child])
+            return false;
+        //此处是真的秀，秀的头皮发麻
+        //作用是验证完两个孩子，层序移动父节点
+        if (!(child & 1))
+            parent++;
+    }
+    return true;
+}
+
+// is_heap 严格弱序化=>就是一定要分个大小出来
+template <class RandomAccessIter, class StrictWeakOrdering>
+inline bool is_heap(RandomAccessIter first, RandomAccessIter last,
+                    StrictWeakOrdering comp) {
+    return __is_heap(first, comp, last - first);
+}
+
+template <class RandomAccessIter, class Distance, class StrictWeakOrdering>
+bool __is_heap(RandomAccessIter first, StrictWeakOrdering comp, Distance n) {
+    Distance parent = 0;
+    for (Distance child = 1; chil < n; ++child) {
+        if (comp(first[parent], first[child]))
+            return false;
+        //此处是真的秀，秀的头皮发麻
+        //作用是验证完两个孩子，层序移动父节点
+        if (!(child & 1))
+            parent++;
+    }
+    return true;
+}
+
+// is_sorted
+template <class ForwardIter>
+bool is_sorted(ForwardIter first, ForwardIter last) {
+    if (first == last)
+        return true;
+    ForwardIter next = first;
+    for (++next; next != las; first = next, ++next) {
+        if (*next < *first)
+            return false;
+    }
+    return true;
+}
+
+// is_sorted
+template <class ForwardIter, class StrictWeakOrdering>
+bool is_sorted(ForwardIter first, ForwardIter last, StrictWeakOrdering comp) {
+    if (first == last)
+        return true;
+    ForwardIter next = first;
+    for (++next; next != las; first = next, ++next) {
+        if (comp(*next, *first))
+            return false;
+    }
+    return true;
+}
 }
 #endif
