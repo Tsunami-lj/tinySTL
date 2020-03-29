@@ -81,7 +81,7 @@ struct iterator_traits {
     typedef typename Iterator::value_type           value_type;
     typedef typename Iterator::difference_type      difference_type;
     typedef typename Iterator::pointer              pointer;
-    typedef typename Iteratoe::reference            reference;
+    typedef typename Iterator::reference            reference;
 };
 
 //偏特化，主要是对指针和常指针
@@ -177,5 +177,98 @@ inline void __advance(BidrectionalIterator& i, Distance n, bidirectional_ietrato
 template <class RandomAccessIterator, class Distance>
 inline void __advance(RandomAccessIterator&i, Distance n, random_access_iterator_tag) {
     i += n;
+}
+
+template <class Iterator>
+class reverse_iterator {
+protected:
+    Iterator current;
+public:
+    typedef typename iterator_traits<Iterator>::iteraor_category    iteraor_category;
+    typedef typename iterator_traits<Iterator>::value_type          value_type;
+    typedef typename iterator_traits<Iterator>::difference_type     difference_type;
+    typedef typename iterator_traits<Iterator>::pointer             pointer;
+    typedef typename iterator_traits<Iterator>::reference           reference;
+    
+    typedef Iterator iterator_type;
+    typedef reverse_iterator<Iterator> Self;
+    
+public:
+    reverse_iterator() {}
+    explicit reverse_iterator(iterator_type x) : current(x) {}
+    
+    reverse_iterator(const Self& x) : current(x.current) {};
+    
+    iterator_type base() const { return current; } //取出对应的正向迭代器
+    reference operator*() const { //实际对应正向迭代器的前一个位置
+        Iterator tmp = current;
+        return *--tmp;
+    }
+    
+    pointer operator->() const { return &(operator*()); }
+    
+    Self& operator++() { //++riter
+        --current;
+        return *this;
+    }
+    
+    Self operator++(int) { //riter++
+        Self tmp = *this;
+        --current;
+        return tmp;
+    }
+    
+    Self& operator--() {
+        ++current;
+        return *this;
+    }
+    
+    Self operator--(int) {
+        Self tmp = *this;
+        ++current;
+        return tmp;
+    }
+    
+    Self operator+(difference_type n) const {
+        return Self(current - n);
+    }
+    
+    Self& operator+(difference_type n) {
+        current -= n;
+        return *this;
+    }
+    
+    Self operator-(difference_type n) const {
+        return Self(current + n);
+    }
+    
+    Self& operator-(difference_type n) {
+        current += n;
+        return *this;
+    }
+    
+    reference operator[](difference_type n) const { return *(*this + n); }
+};
+
+template <class InputIterator, class Distance>
+inline void distance(InputIterator first, InputIterator last, Distance& n) {
+    __distance(first, last, n, iteraor_category(first));
+}
+
+template <class RandomAccessIterator, class Distance>
+inline void __distance(RandomAccessIterator first, RandomAccessIterator last,
+                       Distance& n, random_access_ietrator_tag) {
+    n += last - first;
+}
+
+template <class InputIterator, class Distance>
+inline void __distance(InputIterator first, InputIterator last,
+                       Distance& n, input_ietrator_tag) {
+    while (first != last) {
+        ++first;
+        ++n;
+    }
+}
+
 }
 #endif
