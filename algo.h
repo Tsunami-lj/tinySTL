@@ -3,6 +3,41 @@
 
 namespace mystl {
 
+//median函数，求三个数的中位数
+template <class T>
+inline const T& median(const T& a, const T&b, const T& c) {
+    if (a < b) {
+        if (b < c) // a < b < c
+            return b;
+        else if (a < c) // a < b, c < b, a < c
+            return c;
+        else
+            return a;
+    } else if (a < c) // b < a, a < c
+        return a;
+    else if (b < c) // b < a, c < a, b < c
+        return c;
+    return b;
+}
+
+//median函数，求三个数的中位数,自定义比较函数
+template <class T, class Compare>
+inline const T& median(const T& a, const T&b, const T& c, Compare comp) {
+    if (comp(a, b)) {
+        if (comp(b, c)) // a < b < c
+            return b;
+        else if (comp(a, c)) // a < b, c < b, a < c
+            return c;
+        else
+            return a;
+    } else if (comp(a, c)) // b < a, a < c
+        return a;
+    else if (comp(b, c)) // b < a, c < a, b < c
+        return c;
+    return b;
+}
+
+
 //for_each 对[first, last)内的元素调用函数f
 template <class InputIter, class Function>
 Function for_each(InputIter first, InputIter last, Function f) {
@@ -804,5 +839,437 @@ OutputIter random_sample_n(ForwardIter first, ForwardIter last,
     }
     return res;
 }
+
+// partition
+template <class ForwardIter, class predicate>
+inline ForwardIter partition(ForwardIter first,
+                             ForwardIter last,
+                             Predicate pred) {
+    return __partiton(first, last, pred, iterator_category(first));
+}
+
+//Forward版本，核心思想是将符合条件的都交换到[begin, first)最后返回分割的位置
+template <class ForwardIter, class Predicate>
+ForwardIter __partiton(ForwardIter first,
+                       ForwardIter last,
+                       Predicate pred,
+                       forward_iterator_tag) {
+    if (first == last)
+        return first;
+    
+    while (pred(*first))
+        if (++first == last)
+            return first;
+    
+    ForwardIter next = first;
+    
+    while (++next != last) {
+        swap(*first, *next);
+        ++first;
+    }
+    
+    return first;
+}
+
+//Bidrectional版本，核心思想是从两端各找到第一个位置不对的元素，进行交换
+template <class BidrectionalIter, class Predicate>
+BidrectionalIter __partiton(BidrectionalIter first,
+                            BidrectionalIter last,
+                            Predicate pred,
+                            bidrectional_iterator_tag) {
+    while (true) {
+        while (true) {
+            if (first == last)
+                return first;
+            else if (pred(*first))
+                ++first;
+            else
+                break;
+        }
+        --last;
+        while (true) {
+            if (first == last)
+                return first;
+            else if (!pred(*last))
+                --last;
+            else
+                break;
+        }
+        iter_swap(first, last);
+        ++first;
+    }
+}
+
+//stable_partition
+/*
+template <class ForwardIter, class Predicate>
+inline ForwardIter stable_partition(ForwardIter first,
+                                    ForwardIter last,
+                                    Predicate pred) {
+    if (first == last)
+        return first;
+    return __stable_partition_aux(first, last, pred,
+                                  value_type(first),
+                                  distance_type(first));
+}
+
+template <class ForwardIter, class Predicate, class T, class Distance>
+inline ForwardIter __stable_partition_aux(ForwardIter first,
+                                          ForwardIter last,
+                                          Predicate pred,
+                                          T*, Distance*) {
+    
+}*/
+
+//核心思想跟partition是一样的，左边找第一个不小于pivot的元素，右边着第一个不大于pivot的元素，互相交换
+template <class RandomAccessIter, class T>
+RandomAccessIter unguarded_partion(RandomAccessIter first,
+                                     RandomAccessIter last,
+                                     T pivot) {
+    while (true) {
+        while (*first < pivot)
+            ++first;
+        --last;
+        while (pivot < *last)
+            --last;
+        if (!(first < last))
+            return first;
+        iter_swap(first, last);
+        ++first;
+    }
+}
+
+//自定义比较函数的版本
+template <class RandomAccessIter, class T, class Compare>
+RandomAccessIter unguarded_partion(RandomAccessIter first,
+                                     RandomAccessIter last,
+                                     T pivot, Compare comp) {
+    while (true) {
+        while (comp(*first < pivot))
+            ++first;
+        --last;
+        while (comp(pivot < *last))
+            --last;
+        if (!(first < last))
+            return first;
+        iter_swap(first, last);
+        ++first;
+    }
+}
+
+//partial_sort
+template <class RandomAccessIter>
+inline void partial_sort(RandomAccessIter first,
+                         RandomAccessIter middle,
+                         RandomAccessIter last) {
+    __partiton_sort(first, middle, last, value_type(first));
+}
+
+template <class RandomAccessIter, class T>
+void __partial_sort(RandomAccessIter first, RandomAccessIter middle,
+                    RandomAccessIter last, T*) {
+    make_heap(first, middle);
+    //使用最大堆，留下middle - first个top小的元素
+    for (RandomAccessIter i = middle, i < last; ++i) {
+        if (*i < *first)
+            pop_heap(first, middle, i, T(*i), distance_type(first));
+    }
+    //对这部分元素进行堆排序
+    sort_heap(first, middle);
+}
+
+//partial_sort with Compare
+template <class RandomAccessIter, class Compare>
+inline void partial_sort(RandomAccessIter first,
+                         RandomAccessIter middle,
+                         RandomAccessIter last,
+                         Compare comp) {
+    __partiton_sort(first, middle, last, value_type(first), comp);
+}
+
+template <class RandomAccessIter, class T, class Compare>
+void __partial_sort(RandomAccessIter first, RandomAccessIter middle,
+                    RandomAccessIter last, T*, Compare comp) {
+    make_heap(first, middle, comp);
+    //使用最大堆，留下middle - first个top小的元素
+    for (RandomAccessIter i = middle, i < last; ++i) {
+        if (comp(*i, *first))
+            pop_heap(first, middle, i, T(*i), comp, distance_type(first));
+    }
+    //对这部分元素进行堆排序
+    sort_heap(first, middle, comp);
+}
+
+//将[first, last)以升序排序,并将结果存入到[result_first, result_last).
+template <class InputIter, class RandomAccessIter>
+inline RandomAccessIter partial_sort_copy(InputIter first, InputIter last,
+                                          RandomAccessIter result_first,
+                                          RandomAccessIter result_last) {
+    return __partial_sort_copy(first, last, result_first, result_last,
+                               distance_type(result_first),
+                               value_type(first));
+}
+
+template <class InputIter, class RandomAccessIter, class distance_type, class T>
+RandomAccessIter __partial_sort_copy(InputIter first, InputIter last,
+                                     RandomAccessIter result_first,
+                                     RandomAccessIter result_last,
+                                     Distance*, T*) {
+    if (result_first == result_last)
+        result result_last;
+    RandomAccessIter result_real_last = result_first;
+    while (first != last && result_real_last != result_last) {
+        *result_real_last = *first;
+        ++result_real_last;
+        ++first;
+    }
+    
+    //利用最大堆，选出top k小的元素
+    make_heap(result_first, result_real_last);
+    while (first != last) {
+        if (*first < *result_first) {
+            adjust_heap(result_first, Distance(0),
+                        Distance(result_real_last - result_first),
+                        T(*first));
+            ++first;
+        }
+    }
+    sort_heap(result_first, result_real_last);
+    return result_real_last;
+}
+
+//以自定义比较函数的方式，将[first, last)以升序排序,并将结果存入到[result_first, result_last).
+template <class InputIter, class RandomAccessIter, class Compare>
+inline RandomAccessIter partial_sort_copy(InputIter first, InputIter last,
+                                          RandomAccessIter result_first,
+                                          RandomAccessIter result_last, Compare comp) {
+    return __partial_sort_copy(first, last, result_first, result_last,
+                               comp,
+                               distance_type(result_first),
+                               value_type(first));
+}
+
+template <class InputIter, class RandomAccessIter, class Distance, class T>
+RandomAccessIter __partial_sort_copy(InputIter first, InputIter last,
+                                     RandomAccessIter result_first,
+                                     RandomAccessIter result_last,
+                                     Compare comp, Distance*, T*) {
+    if (result_first == result_last)
+        result result_last;
+    RandomAccessIter result_real_last = result_first;
+    while (first != last && result_real_last != result_last) {
+        *result_real_last = *first;
+        ++result_real_last;
+        ++first;
+    }
+    
+    //利用最大堆，选出top k小的元素
+    make_heap(result_first, result_real_last, comp);
+    while (first != last) {
+        if (comp(*first, *result_first)) {
+            adjust_heap(result_first, Distance(0),
+                        Distance(result_real_last - result_first),
+                        T(*first),
+                        comp);
+            ++first;
+        }
+    }
+    sort_heap(result_first, result_real_last, comp);
+    return result_real_last;
+}
+
+//sort
+const int stl_threshold = 16;
+
+template <class RandomAccessIter>
+inline void sort(RandomAccessIter first, RandomAccessIter last) {
+    if (first != last) {
+        introsort_loop(first, last,
+                       value_type(first),
+                       lg(last - first) * 2);
+        final_insertiton_sort(first, last);
+    }
+}
+
+template <class RandomAccessIter, class T, class Size>
+void introsort_loop(RandomAccessIter first,
+                      RandomAccessIter last,
+                      T*, Size depth_limit) {
+    while (last - first > stl_threshold) {
+        if (depth_limit == 0) {//当迭代深度达到一定程度，改成partial_sort，即堆排序
+            partial_sort(first, last, last);
+            return;
+        }
+        --depth_limit;
+        RandomAccessIter cut = unguarded_partion(first, last, T(median(*first,
+                                                                         *(first + (last - first)/2),
+                                                                         *(last - 1))));
+        introsort_loop(cut, last, (T*) 0, depth_limit);//将原数组分成两部分，后半部分递归，前半部分迭代
+        last = cut;
+    }
+}
+
+//该算法设计的比较有意思，其实都是做插入排序，但是这边设置了个阈值16，即元素小于16的时候我还看下是不是能够直接放在首位置，
+//如果可以直接就直接右移所有元素。但是当元素大于16的时候，我就直接从后往前找合适的插入位置，而不去判断和首元素的关系
+template <class RandomAccessIter>
+void final_insertion_sort(RandomAccessIter first,
+                      RandomAccessIter last) {
+    if (last - first > stl_threshold) {
+        insertion_sort(first, first + stl_threshold);//将前16个插入排序
+        unguarded_insertion_sort(first + stl_threshold, last);//剩下的线性插入
+    } else
+        insertion_sort(first, last);
+}
+
+template <class RandomAccessIter>
+inline void unguarded_insertion_sort(RandomAccessIter first,
+                                     RandomAccessIter last) {
+    unguarded_insertion_sort_aux(first, last, value_type(first));
+}
+
+template <class RandomAccessIter, class T>
+void unguarded_insertion_sort_aux(RandomAccessIter first,
+                                  RandomAccessIter last, T*) {
+    for (RandomAccessIter i = first; i != last; ++i)
+        unguared_linear_insert(i, T(*i));
+}
+
+//线性插入，从当前位置的前一个位置开始找第一个大于等于待插入值的位置
+template <class RandomAccessIter, class T>
+void unguared_linear_insert(RandomAccessIter last, T val) {
+    RandomAccessIter next = last;
+    --next;
+    while (val < *next) {
+        *last = *next;
+        last = next;
+    }
+    *last = val;
+}
+
+template <class RandomAccessIter>
+void insertion_sort(RandomAccessIter first, RandomAccessIter last) {
+    if (first == last)
+        return;
+    for (RandomAccessIter i = first + 1; i != last; ++i)
+        liner_insert(first, i, value_type(first));
+}
+
+template <class RandomAccessIter, class T>
+inline void liner_insert(RandomAccessIter first,
+                         RandomAccessIter last, T*) {
+    T val = *last;
+
+    if (val < *first) { // 如果要插入的元素小于首元素，直接向右移动一格，并将新元素放在首位置
+        copy_backward(first, last, last + 1);
+        *first = val;
+    }
+    else // 否则线性插入
+        unguared_linear_insert(last, val);
+}
+
+//lg辅助函数，在排序中用来求最大深度
+template <class Size>
+inline Size lg(Size n) {
+    Size k;
+    for (k = 0; n != 1; n >>= 1)
+        ++k;
+    return k;
+}
+
+//sort with Compare
+template <class RandomAccessIter, class Compare>
+inline void sort(RandomAccessIter first, RandomAccessIter last,
+                 Compare comp) {
+    if (first != last) {
+        introsort_loop(first, last,
+                       value_type(first),
+                       lg(last - first) * 2,
+                       comp);
+        final_insertiton_sort(first, last, comp);
+    }
+}
+
+template <class RandomAccessIter, class T, class Size, class Compare>
+void introsort_loop(RandomAccessIter first,
+                      RandomAccessIter last,
+                      T*, Size depth_limit, Compare comp) {
+    while (last - first > stl_threshold) {
+        if (depth_limit == 0) {//当迭代深度达到一定程度，改成partial_sort，即堆排序
+            partial_sort(first, last, last, comp);
+            return;
+        }
+        --depth_limit;
+        RandomAccessIter cut = unguarded_partion(first, last, T(median(*first,
+                                                                         *(first + (last - first)/2),
+                                                                         *(last - 1), comp)),
+                                                 comp);
+        introsort_loop(cut, last, (T*) 0, depth_limit, comp);//将原数组分成两部分，后半部分递归，前半部分迭代
+        last = cut;
+    }
+}
+
+//该算法设计的比较有意思，其实都是做插入排序，但是这边设置了个阈值16，即元素小于16的时候我还看下是不是能够直接放在首位置，
+//如果可以直接就直接右移所有元素。但是当元素大于16的时候，我就直接从后往前找合适的插入位置，而不去判断和首元素的关系
+template <class RandomAccessIter, class Compare>
+void final_insertion_sort(RandomAccessIter first,
+                      RandomAccessIter last, Compare comp) {
+    if (last - first > stl_threshold) {
+        insertion_sort(first, first + stl_threshold, comp);//将前16个插入排序
+        unguarded_insertion_sort(first + stl_threshold, last, comp);//剩下的线性插入
+    } else
+        insertion_sort(first, last, comp);
+}
+
+template <class RandomAccessIter, class Compare>
+inline void unguarded_insertion_sort(RandomAccessIter first,
+                                     RandomAccessIter last,
+                                     Compare comp) {
+    unguarded_insertion_sort_aux(first, last, value_type(first), comp);
+}
+
+template <class RandomAccessIter, class T, class Compare>
+void unguarded_insertion_sort_aux(RandomAccessIter first,
+                                  RandomAccessIter last, T*,
+                                  Compare comp) {
+    for (RandomAccessIter i = first; i != last; ++i)
+        unguared_linear_insert(i, T(*i), comp);
+}
+
+//线性插入，从当前位置的前一个位置开始找第一个大于等于待插入值的位置
+template <class RandomAccessIter, class T, class Compare>
+void unguared_linear_insert(RandomAccessIter last, T val,
+                            Compare comp) {
+    RandomAccessIter next = last;
+    --next;
+    while (comp(val, *next)) {
+        *last = *next;
+        last = next;
+    }
+    *last = val;
+}
+
+template <class RandomAccessIter, class Compare>
+void insertion_sort(RandomAccessIter first, RandomAccessIter last,
+                    Compare comp) {
+    if (first == last)
+        return;
+    for (RandomAccessIter i = first + 1; i != last; ++i)
+        liner_insert(first, i, value_type(first), comp);
+}
+
+template <class RandomAccessIter, class T, class Compare>
+inline void liner_insert(RandomAccessIter first,
+                         RandomAccessIter last, T*,
+                         Compare comp) {
+    T val = *last;
+
+    if (comp(val, *first)) { // 如果要插入的元素小于首元素，直接向右移动一格，并将新元素放在首位置
+        copy_backward(first, last, last + 1);
+        *first = val;
+    }
+    else // 否则线性插入
+        unguared_linear_insert(last, val, comp);
+}
+
 }
 #endif
