@@ -22,11 +22,11 @@ public:
 };
 
 void *Test::operator new(size_t n) {
-	return Alloc().allocate(n); 
+	return alloc().allocate(n); 
 }
 
 void Test::operator delete(void* p) {
-	Alloc().deallocate(p, sizeof(p));
+	alloc().deallocate(p, sizeof(p));
 }
 
 int Test::count = 0;

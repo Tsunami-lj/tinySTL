@@ -8,7 +8,7 @@ const int NFREELISTS = 16;
 const int MAX_BYTES = 128;
 
 const int DEFAULT_BLOCKS = 20;
-class Alloc {
+class alloc {
 private:
     //向上调整到8的倍数
     static size_t ROUND_UP(size_t bytes) {
@@ -72,7 +72,7 @@ public:
         *my_free_list = q;
     }
 };
-char* Alloc::chunk_alloc(size_t size, int &nobjs) {
+char* alloc::chunk_alloc(size_t size, int &nobjs) {
     char* result;
     size_t total_bytes = size * nobjs;
     size_t remain_bytes = end_free - start_free;
@@ -118,7 +118,7 @@ char* Alloc::chunk_alloc(size_t size, int &nobjs) {
         return chunk_alloc(size, nobjs);
     }
 }
-void* Alloc::refill(size_t n) {
+void* alloc::refill(size_t n) {
     int nobjs = DEFAULT_BLOCKS;
     char* chunk = chunk_alloc(n, nobjs);
     obj* volatile *my_free_list;
@@ -143,10 +143,10 @@ void* Alloc::refill(size_t n) {
     }
     return result;
 }
-char* Alloc::start_free = NULL;
-char* Alloc::end_free = NULL;
-size_t Alloc::heap_size = 0;
-Alloc::obj* volatile Alloc::free_list[NFREELISTS] = {
+char* alloc::start_free = NULL;
+char* alloc::end_free = NULL;
+size_t alloc::heap_size = 0;
+alloc::obj* volatile alloc::free_list[NFREELISTS] = {
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 }
