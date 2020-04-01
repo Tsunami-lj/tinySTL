@@ -167,10 +167,152 @@ public:
     const_reference back() const {
         return *(end() - 1);
     }
+
+    void push_back(const T& x) {
+        if (finish != end_of_storage) {
+            construct(finish, x);
+            ++finish;
+        } else
+            insert_aux(end(), x);
+    }
     
+    void pop_back() {
+        --finish;
+        destroy(finish);
+    }
+
+    // 返回值为finish的位置
+    iterator insert(iterator position, const T& x) {
+        szie_type n = position - begin();
+        if (finish != end_of_storage && position == end()) {
+            construct(finish, x);
+            ++finish;
+        } else
+            insert_aux(position, x);
+        return begin() + n;
+    }
+
+    iterator insert(iterator position) {
+        return insert(position, T());
+    }
     
+    void insert(iterator pos, size_type n, const T& x);
+    void insert(iterator pos, int n, const T& x) {
+        insert(pos, (szie_type) n, x);
+    }
+    void insert(iterator pos, long n, const T& x) {
+        insert(pos, (size_type) n, x);
+    }
+    
+    //返回值为删除的迭代器位置，但是需要注意的是从position开始的所有的迭代器已经失效了
+    iterator erase(iterator position) {
+        if (position + 1 != end())
+            copy(position + 1, finish, position);
+        --finish;
+        destroy(finish);
+        return position;
+    }
+    
+    iterator erase(iterator first, iterator last) {
+        iterator i = copy(last, finish, first);
+        destroy(i, finish);
+        finish = finish - (last - first);
+        return first;
+    }
+    
+    void swap(vector<T, Alloc>& x) {
+        swap(start, x.start);
+        swap(finish, x.finish);
+        swap(end_of_storage, x.end_of_storage);
+    }
+    
+    void reverse(size_type n) {
+        if (capacity < n) {
+            const size_type old_size = size();
+            iterator tmp = allocate_and_copy(n, start, finish);
+            destroy(start, finish);
+            start = tmp;
+            finish = tmp + old_size;
+            end_of_storage = start + n;
+        }
+    }
+
+    void resize(size_type new_size) {
+        return resize(new_size, T());
+    }
+
+    void resize(size_type new_size, const T& x) {
+        if (new_size < size())
+            erase(begin() + new_size, end());
+        else
+            insert(end(), new_size - size(), x);
+    }
+
+    void clear() {
+        erase(begin(), end());
+    }
+
 }
 
+template <class T, class Alloc>
+void vector<T, Alloc>::insert_aux(iterator position, const T& x) {
+    if (finish != end_of_storage) {
+        //先将finish位置构造一个对象
+        construct(finish, *(finish - 1));
+        ++finish;
+        T x_copy = x;
+        //将[postion,finish)的元素往后挪一格
+        copy_backward(position, finish - 2, finish - 1);
+        *position = x_copy;
+    } else {
+        const size_type old_size = size();
+        const size_type len = old_size != 0 : 2 * old_size : 1; //非0以两倍扩张，否则置为1
+        iterator new_start = data_allocator::allocate(len);
+        iterator new_finish = new_start;
+        
+        new_finish = uninitialized_copy(start, position, new_start);
+        construct(new_finish, x);
+        ++new_finish;
+        new_finish = uninitialized_copy(position, finish, new_finish);
+        
+        destroy(begin(), end());
+        deallocate();
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = new_start + len;
+    }
+}
+
+template <class T, class Alloc>
+inline bool operator ==(const vector<T, Alloc>& x, const vector<T, Alloc>& y) {
+    return x.size() == y.size() && equal(x.begin(), x.end(), y.begin());
+}
+
+template <class T, class Alloc>
+inline bool operator <(const vector<T, Alloc>& x, const vector<T, Alloc>& y) {
+    return lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
+}
+
+template <class T, class Alloc>
+vector<T, Alloc>& vector<T, Alloc>::operator=(const vector<T, Alloc>& x) {
+    if (&x != this) {
+        if (x.size() > capacity()) { //当前分配的内存不够，需要重新分配内存，并销毁当前内存
+            iterator tmp = allocate_and_copy(x.end() - x.begin(), x.begin(), x.end());
+            destroy(start, finish);
+            deallocate();
+            start = tmp;
+            end_of_storage = start + x.size();
+        } else if (size() >= x.size()) { //当前已用内存都够大时，需要将多出的空间元素destroy
+            iterator i = copy(x.begin(), x.end(), start);
+            destroy(i, finish);
+        } else { //当前已用内存太小，但是分配内存足够,需要注意的是这些未使用已申请的内存需要用uninitialized_copy，这里面会调用构造函数，而普通的copy不会
+            copy(x.begin(), x.begin() + size(), start);
+            uninitialized_copy(x.begin() + size(), x.end(), finish);
+        }
+        finish = start + x.size();
+    }
+    return *this;
+}
 
 }
 #endif
