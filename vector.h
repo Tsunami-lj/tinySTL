@@ -314,5 +314,98 @@ vector<T, Alloc>& vector<T, Alloc>::operator=(const vector<T, Alloc>& x) {
     return *this;
 }
 
+template <class T, class Alloc>
+void vector<T, Alloc>::insert(iterator position, size_type n, const T& x) {
+    if (n != 0) {
+        //之前申请的剩余空间足够的情况下
+        if (size_type(end_of_storage - finish) >= n) {
+            T x_copy = x;
+            const size_type elems_after = finish - position;
+            iterator old_finish = finish;
+            if (elems_after > n) {
+                //先将[finish - n, finish)元素填到[finish, finish + n)
+                //针对未初始化过的位置要调用构造函数，不能直接用copy
+                uninitialized_copy(finish - n, finish, finish);
+                finish += n;
+                //再将[position, finish - n)的元素填到[xxx, finish)的位置上
+                copy_backward(position, old_finish - n, old_finish);
+                //最后将[postiton, position + n)填满x
+                fill(position, position + n, x_copy);
+            } else {
+                //将[finish, finish + n - elms_after)填充为x
+                uninitialized_fill_n(finish, n - elems_after, x_copy);
+                finish += n - elems_after;
+                //将[position, old_finish)的元素直接拷贝到finish + n - elems_after起始的位置
+                uninitialized_copy(position, old_finish, finish);
+                finish += elems_after;
+                //最后将[postiton, old_finish)填满x
+                fill(position, old_finish, x_copy);
+                
+            }
+        }
+    } else {
+        const size_type old_size = size();
+        const size_type len = old_size + max(old_size, n); //要么两倍扩张，要么原大小+n扩张
+        iterator new_start = data_allocator::data_allocator(len);
+        iterator new_finish = new_start;
+        //将[start, position)拷贝到新起点
+        new_finish = uninitialized_copy(start, position, new_start);
+        //填充n个x
+        new_finish = uninitialized_fill_n(new_finish, n, x);
+        //将[position, old_finish)拷贝到当前末尾
+        new_finish = uninitialized_copy(position, finish, new_finish);
+        //释放原来的内存[start, finish)
+        destroy(start, finish);
+        deallocate();
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = new_start + len;
+    }
+}
+
+template <class T, class Alloc>
+void vector<T, Alloc>::insert(iterator position,
+                              const_iterator first,
+                              const_iterator last) {
+    if (first != last) {
+        size_type n = 0;
+        distance(first, last, n);
+        if (size_type(end_of_storage - finish) >= n) {
+            const size_type elems_after = finish - position;
+            iterator old_finish = finish;
+            if (elms_after > n) {
+                uninitialized_copy(finish - n, finish, finish);
+                finish += n;
+                copy_backward(position, old_finish - n, old_finish);
+                copy(first, last, position);
+            } else {
+                //现将[first,last)中超出的元素尾巴部分构造好
+                uninitialized_copy(first + elems_after, last, finish);
+                finish += n - elems_after;
+                //将[position, old_finish)拷贝到刚才更新完的尾部
+                uninitialized_copy(position, old_finish, finish);
+                finish += elems_after;
+                //最后将[first, last)区间内刚才的前半段拷贝过来
+                copy(first, first + elems_after, position);
+            }
+        } else {
+            const size_type old_size = size();
+            const size_type len = old_size + max(old_size, n);
+            iterator new_start = data_allocator::allocate(len);
+            iterator new_finish = new_start;
+            //将[start, position)拷贝到新起点
+            new_finish = uninitialized_copy(start, position, new_start);
+            //将[first, last)拷贝到新终点
+            new_finish = uninitialized_copy(first, last, new_finish);
+            //将[position, old_finish)拷贝到当前末尾
+            new_finish = uninitialized_copy(position, finish, new_finish);
+            destroy(start, finish);
+            deallocate();
+            start = new_start;
+            finish = new_finish;
+            end_of_storage = new_start + len;
+        }
+    }
+}
 }
 #endif
